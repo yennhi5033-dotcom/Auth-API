@@ -1,7 +1,7 @@
 ﻿import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/user.model.js";
-import admin from "../config/firebase.js";
+import firebaseAuth from "../config/firebase.js";
 
 export const removePassword = (user) => {
   const data = user.toObject ? user.toObject() : { ...user };
@@ -107,7 +107,7 @@ export const login = async (req, res, next) => {
     );
 
     return res.status(200).json({
-      message: "Đăng nhập thành công",
+      message: "�ang nh?p th�nh c�ng",
       user: removePassword(user),
       token,
       expiresIn: "1d"
@@ -124,14 +124,14 @@ export const getMe = async (req, res, next) => {
 
     if (!user) {
       return res.status(404).json({
-        message: "Không tìm thấy người dùng",
+        message: "Kh�ng t�m th?y ngu?i d�ng",
         error: "NotFound",
         statusCode: 404
       });
     }
 
     return res.status(200).json({
-      message: "Lấy thông tin thành công",
+      message: "L?y th�ng tin th�nh c�ng",
       user: removePassword(user)
     });
   } catch (error) {
@@ -145,7 +145,7 @@ export const changePassword = async (req, res, next) => {
 
     if (!oldPassword || !newPassword) {
       return res.status(400).json({
-        message: "oldPassword và newPassword là bắt buộc",
+        message: "oldPassword v� newPassword l� b?t bu?c",
         error: "BadRequest",
         statusCode: 400
       });
@@ -153,7 +153,7 @@ export const changePassword = async (req, res, next) => {
 
     if (newPassword.length < 6) {
       return res.status(400).json({
-        message: "Password mới phải có ít nhất 6 ký tự",
+        message: "Password m?i ph?i c� �t nh?t 6 k� t?",
         error: "BadRequest",
         statusCode: 400
       });
@@ -164,7 +164,7 @@ export const changePassword = async (req, res, next) => {
 
     if (!user) {
       return res.status(404).json({
-        message: "Không tìm thấy người dùng",
+        message: "Kh�ng t�m th?y ngu?i d�ng",
         error: "NotFound",
         statusCode: 404
       });
@@ -174,7 +174,7 @@ export const changePassword = async (req, res, next) => {
 
     if (!isOldPasswordValid) {
       return res.status(401).json({
-        message: "Mật khẩu hiện tại không đúng",
+        message: "M?t kh?u hi?n t?i kh�ng d�ng",
         error: "Unauthorized",
         statusCode: 401
       });
@@ -185,7 +185,7 @@ export const changePassword = async (req, res, next) => {
     await user.save();
 
     return res.status(200).json({
-      message: "Đổi mật khẩu thành công"
+      message: "�?i m?t kh?u th�nh c�ng"
     });
   } catch (error) {
     next(error);
@@ -194,13 +194,13 @@ export const changePassword = async (req, res, next) => {
 
 export const logout = async (req, res) => {
   return res.status(200).json({
-    message: "Đăng xuất thành công"
+    message: "�ang xu?t th�nh c�ng"
   });
 };
 
 /**
  * POST /api/auth/google-login
- * Nhận Firebase ID Token -> Xác thực qua Firebase Admin SDK -> Tìm hoặc tạo User -> Ký JWT hệ thống.
+ * Nh?n Firebase ID Token -> X�c th?c qua Firebase Admin SDK -> T�m ho?c t?o User -> K� JWT h? th?ng.
  */
 export const googleLogin = async (req, res, next) => {
   try {
@@ -208,26 +208,34 @@ export const googleLogin = async (req, res, next) => {
 
     if (!idToken) {
       return res.status(400).json({
-        message: "idToken là bắt buộc",
+        message: "idToken l� b?t bu?c",
         error: "BadRequest",
         statusCode: 400,
       });
     }
 
-    // 1. Xác thực ID Token qua Firebase Admin SDK
+    if (!firebaseAuth) {
+      return res.status(500).json({
+        message: "Firebase Admin SDK chua du?c c?u h�nh tr�n server",
+        error: "InternalServerError",
+        statusCode: 500,
+      });
+    }
+
+    // 1. X�c th?c ID Token qua Firebase Admin SDK
     let decodedToken;
     try {
-      decodedToken = await admin.auth().verifyIdToken(idToken);
+      decodedToken = await firebaseAuth.verifyIdToken(idToken);
     } catch (err) {
       if (err.code === "auth/id-token-expired") {
         return res.status(401).json({
-          message: "Firebase ID Token đã hết hạn",
+          message: "Firebase ID Token d� h?t h?n",
           error: "Unauthorized",
           statusCode: 401,
         });
       }
       return res.status(401).json({
-        message: "Firebase ID Token không hợp lệ",
+        message: "Firebase ID Token kh�ng h?p l?",
         error: "Unauthorized",
         statusCode: 401,
       });
@@ -237,7 +245,7 @@ export const googleLogin = async (req, res, next) => {
 
     if (!email) {
       return res.status(400).json({
-        message: "Tài khoản Google không cung cấp email hợp lệ",
+        message: "T�i kho?n Google kh�ng cung c?p email h?p l?",
         error: "BadRequest",
         statusCode: 400,
       });
@@ -245,11 +253,11 @@ export const googleLogin = async (req, res, next) => {
 
     const normalizedEmail = email.trim().toLowerCase();
 
-    // 2. Tìm User trong Database
+    // 2. T�m User trong Database
     let user = await User.findOne({ email: normalizedEmail });
 
     if (user) {
-      // Nếu đã có tài khoản: cập nhật thêm googleId/avatar nếu trước đó đăng ký local
+      // N?u d� c� t�i kho?n: c?p nh?t th�m googleId/avatar n?u tru?c d� dang k� local
       let updated = false;
       if (!user.googleId) {
         user.googleId = uid;
@@ -263,7 +271,7 @@ export const googleLogin = async (req, res, next) => {
         await user.save();
       }
     } else {
-      // 3. Nếu chưa có tài khoản: tạo User mới với authType = 'google'
+      // 3. N?u chua c� t�i kho?n: t?o User m?i v?i authType = 'google'
       user = await User.create({
         name: name || normalizedEmail.split("@")[0],
         email: normalizedEmail,
@@ -274,8 +282,8 @@ export const googleLogin = async (req, res, next) => {
       });
     }
 
-    // 4. Ký JWT của hệ thống (dùng chung quy ước với login thường)
-   const expiresIn = process.env.JWT_EXPIRES_IN || "1d";
+    // 4. K� JWT c?a h? th?ng (d�ng chung quy u?c v?i login thu?ng)
+    const expiresIn = process.env.JWT_EXPIRES_IN || "1d";
     const token = jwt.sign(
       {
         userId: user._id.toString(),
@@ -286,7 +294,7 @@ export const googleLogin = async (req, res, next) => {
     );
 
     return res.status(200).json({
-      message: "Đăng nhập Google thành công",
+      message: "�ang nh?p Google th�nh c�ng",
       user: removePassword(user),
       token,
       expiresIn,
@@ -295,6 +303,7 @@ export const googleLogin = async (req, res, next) => {
     next(error);
   }
 };
+
 export default {
   register,
   login,
