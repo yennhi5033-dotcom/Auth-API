@@ -2,6 +2,7 @@
 import {
   register,
   login,
+  googleLogin,
   getMe,
   changePassword,
   logout
@@ -115,6 +116,55 @@ router.post("/register", register);
  *               statusCode: 401
  */
 router.post("/login", login);
+
+/**
+ * @openapi
+ * /api/auth/google-login:
+ *   post:
+ *     summary: Đăng nhập bằng Google (Firebase ID Token)
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - idToken
+ *             properties:
+ *               idToken:
+ *                 type: string
+ *                 description: Firebase ID Token nhận được từ Google Sign-In trên client
+ *                 example: "eyJhbGciOiJSUzI1NiIsImtpZCI6IjEy..."
+ *     responses:
+ *       200:
+ *         description: Đăng nhập Google thành công, trả về user và JWT token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AuthResponse'
+ *       400:
+ *         description: Thiếu idToken hoặc tài khoản Google không cung cấp email
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               message: "idToken là bắt buộc"
+ *               error: "BadRequest"
+ *               statusCode: 400
+ *       401:
+ *         description: Firebase ID Token không hợp lệ hoặc đã hết hạn
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               message: "Firebase ID Token không hợp lệ"
+ *               error: "Unauthorized"
+ *               statusCode: 401
+ */
+router.post("/google-login", googleLogin);
 
 /**
  * @openapi

@@ -15,11 +15,27 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       trim: true
     },
-    password: {
+     password: {
       type: String,
-      required: [true, "Password là bắt buộc"],
-      minlength: 6,
-      select: false
+      // Bắt buộc nếu đăng nhập thường, không bắt buộc nếu dùng Google OAuth
+      required: function () {
+        return this.authType === "local";
+      },
+      minlength: [6, "Password phải có ít nhất 6 ký tự"],
+      select: false,
+    },
+    googleId: {
+      type: String,
+      default: null,
+    },
+    avatar: {
+      type: String,
+      default: "default.jpg",
+    },
+    authType: {
+      type: String,
+      enum: ["local", "google"],
+      default: "local",
     },
     role: {
       type: String,

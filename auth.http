@@ -36,3 +36,33 @@ Authorization: Bearer <token>
 ### Admin Dashboard
 GET http://localhost:3001/api/auth/admin/dashboard
 Authorization: Bearer <token>
+### -------------------------------------------------------------------------
+### GOOGLE LOGIN (Firebase Auth)
+### -------------------------------------------------------------------------
+
+# 1. Login bằng Firebase ID Token (Lấy ID Token từ frontend hoặc Firebase CLI)
+POST http://localhost:3001/api/auth/google-login
+Content-Type: application/json
+
+{
+  "idToken": "PASTE_FIREBASE_ID_TOKEN_HERE"
+}
+
+###
+
+# 2. Thiếu idToken -> mong đợi 400
+POST http://localhost:3001/api/auth/google-login
+Content-Type: application/json
+
+{
+}
+
+###
+
+# 3. idToken không hợp lệ / giả mạo -> mong đợi 401
+POST http://localhost:3001/api/auth/google-login
+Content-Type: application/json
+
+{
+  "idToken": "fake_token_123456"
+}

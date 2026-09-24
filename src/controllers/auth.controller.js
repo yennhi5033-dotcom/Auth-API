@@ -1,6 +1,7 @@
 ﻿import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/user.model.js";
+import admin from "../config/firebase.js";
 
 export const removePassword = (user) => {
   const data = user.toObject ? user.toObject() : { ...user };
@@ -197,11 +198,109 @@ export const logout = async (req, res) => {
   });
 };
 
+/**
+ * POST /api/auth/google-login
+ * Nhận Firebase ID Token -> Xác thực qua Firebase Admin SDK -> Tìm hoặc tạo User -> Ký JWT hệ thống.
+ */
+export const googleLogin = async (req, res, next) => {
+  try {
+    const { idToken } = req.body;
+
+    if (!idToken) {
+      return res.status(400).json({
+        message: "idToken là bắt buộc",
+        error: "BadRequest",
+        statusCode: 400,
+      });
+    }
+
+    // 1. Xác thực ID Token qua Firebase Admin SDK
+    let decodedToken;
+    try {
+      decodedToken = await admin.auth().verifyIdToken(idToken);
+    } catch (err) {
+      if (err.code === "auth/id-token-expired") {
+        return res.status(401).json({
+          message: "Firebase ID Token đã hết hạn",
+          error: "Unauthorized",
+          statusCode: 401,
+        });
+      }
+      return res.status(401).json({
+        message: "Firebase ID Token không hợp lệ",
+        error: "Unauthorized",
+        statusCode: 401,
+      });
+    }
+
+    const { uid, email, name, picture } = decodedToken;
+
+    if (!email) {
+      return res.status(400).json({
+        message: "Tài khoản Google không cung cấp email hợp lệ",
+        error: "BadRequest",
+        statusCode: 400,
+      });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // 2. Tìm User trong Database
+    let user = await User.findOne({ email: normalizedEmail });
+
+    if (user) {
+      // Nếu đã có tài khoản: cập nhật thêm googleId/avatar nếu trước đó đăng ký local
+      let updated = false;
+      if (!user.googleId) {
+        user.googleId = uid;
+        updated = true;
+      }
+      if (picture && user.avatar === "default.jpg") {
+        user.avatar = picture;
+        updated = true;
+      }
+      if (updated) {
+        await user.save();
+      }
+    } else {
+      // 3. Nếu chưa có tài khoản: tạo User mới với authType = 'google'
+      user = await User.create({
+        name: name || normalizedEmail.split("@")[0],
+        email: normalizedEmail,
+        googleId: uid,
+        avatar: picture || "default.jpg",
+        authType: "google",
+        role: "user",
+      });
+    }
+
+    // 4. Ký JWT của hệ thống (dùng chung quy ước với login thường)
+   const expiresIn = process.env.JWT_EXPIRES_IN || "1d";
+    const token = jwt.sign(
+      {
+        userId: user._id.toString(),
+        role: user.role,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn },
+    );
+
+    return res.status(200).json({
+      message: "Đăng nhập Google thành công",
+      user: removePassword(user),
+      token,
+      expiresIn,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 export default {
   register,
   login,
   getMe,
   changePassword,
   removePassword,
-  logout
+  logout,
+  googleLogin,
 };

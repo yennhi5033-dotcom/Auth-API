@@ -6,12 +6,12 @@ Tài liệu hướng dẫn chi tiết các endpoint API, định dạng Payload 
 
 ## 1. Thông tin chung (General Information)
 
-- **Base URL:** `http://localhost:3001` (tuỳ chỉnh theo `.env`)
+- **Base URL:** `http://localhost:3001` (tuỳ chỉnh theo biến môi trường `.env`)
 - **API Prefix:** `/api/auth`
-- **Swagger Docs:** `http://localhost:3001/api-docs`
+- **Swagger UI:** `http://localhost:3001/api-docs`
 - **Swagger JSON:** `http://localhost:3001/api-docs.json`
 - **Content-Type:** `application/json` cho toàn bộ request có body.
-- **Cơ chế xác thực:** JWT Bearer Token qua header:
+- **Cơ chế xác thực:** JWT Bearer Token gửi qua header:
   ```http
   Authorization: Bearer <access_token>
   ```
@@ -21,14 +21,15 @@ Tài liệu hướng dẫn chi tiết các endpoint API, định dạng Payload 
 ## 2. Bảng tổng hợp Endpoints
 
 | STT | Method | Endpoint | Yêu cầu Token | Phân quyền | Mô tả |
-| :--- | :--- | :--- | :---: | :---: | :--- |
+| :---: | :--- | :--- | :---: | :---: | :--- |
 | 1 | `GET` | `/` | ❌ | All | Kiểm tra trạng thái server |
-| 2 | `POST` | `/api/auth/register` | ❌ | All | Đăng ký tài khoản mới |
-| 3 | `POST` | `/api/auth/login` | ❌ | All | Đăng nhập hệ thống & lấy Token |
-| 4 | `GET` | `/api/auth/me` | ✅ | User / Admin | Lấy thông tin user hiện tại |
-| 5 | `PUT` | `/api/auth/change-password` | ✅ | User / Admin | Đổi mật khẩu |
-| 6 | `POST` | `/api/auth/logout` | ❌ | All | Đăng xuất |
-| 7 | `GET` | `/api/auth/admin/dashboard` | ✅ | `admin` | Trang thống kê / Dashboard Admin |
+| 2 | `POST` | `/api/auth/register` | ❌ | All | Đăng ký tài khoản mới bằng Email/Password |
+| 3 | `POST` | `/api/auth/login` | ❌ | All | Đăng nhập bằng Email/Password & nhận JWT |
+| 4 | `POST` | `/api/auth/google-login` | ❌ | All | Đăng nhập qua Google (Firebase ID Token) |
+| 5 | `GET` | `/api/auth/me` | ✅ | User / Admin | Lấy thông tin user hiện tại |
+| 6 | `PUT` | `/api/auth/change-password` | ✅ | User / Admin | Đổi mật khẩu tài khoản |
+| 7 | `POST` | `/api/auth/logout` | ❌ | All | Đăng xuất |
+| 8 | `GET` | `/api/auth/admin/dashboard` | ✅ | `admin` | Khu vực quản trị Admin (RBAC) |
 
 ---
 
@@ -51,7 +52,7 @@ Kiểm tra server đang hoạt động.
 ---
 
 ### 3.2. Đăng ký tài khoản (Register)
-Tạo mới một tài khoản trong hệ thống.
+Tạo tài khoản mới bằng email và mật khẩu.
 
 - **URL:** `/api/auth/register`
 - **Method:** `POST`
@@ -60,10 +61,10 @@ Tạo mới một tài khoản trong hệ thống.
   Content-Type: application/json
   ```
 - **Request Body:**
-  | Trường | Kiểu dữ liệu | Bắt buộc | Mặc định | Mô tả |
+  | Field | Type | Required | Default | Description |
   | :--- | :--- | :---: | :---: | :--- |
   | `name` | `string` | **Có** | - | Họ tên người dùng |
-  | `email` | `string` | **Có** | - | Email (được tự động lowercase & trim) |
+  | `email` | `string` | **Có** | - | Email (tự động lowercase & trim) |
   | `password` | `string` | **Có** | - | Mật khẩu (tối thiểu 6 ký tự) |
   | `role` | `string` | Không | `"user"` | Vai trò: `"user"` hoặc `"admin"` |
 
@@ -85,6 +86,9 @@ Tạo mới một tài khoản trong hệ thống.
       "_id": "670c538df0b5b1a8f9c11223",
       "name": "Pham Haa",
       "email": "haa12@example.com",
+      "avatar": "default.jpg",
+      "authType": "local",
+      "googleId": null,
       "role": "user",
       "createdAt": "2026-09-18T07:30:00.000Z",
       "updatedAt": "2026-09-18T07:30:00.000Z"
@@ -120,8 +124,8 @@ Tạo mới một tài khoản trong hệ thống.
 
 ---
 
-### 3.3. Đăng nhập (Login)
-Xác thực email + password và nhận JWT token để sử dụng cho các request sau.
+### 3.3. Đăng nhập truyền thống (Login)
+Xác thực email + mật khẩu và nhận JWT token.
 
 - **URL:** `/api/auth/login`
 - **Method:** `POST`
@@ -130,9 +134,9 @@ Xác thực email + password và nhận JWT token để sử dụng cho các req
   Content-Type: application/json
   ```
 - **Request Body:**
-  | Trường | Kiểu dữ liệu | Bắt buộc | Mô tả |
+  | Field | Type | Required | Description |
   | :--- | :--- | :---: | :--- |
-  | `email` | `string` | **Có** | Email đăng ký |
+  | `email` | `string` | **Có** | Email tài khoản |
   | `password` | `string` | **Có** | Mật khẩu tài khoản |
 
 - **Body mẫu:**
@@ -151,11 +155,14 @@ Xác thực email + password và nhận JWT token để sử dụng cho các req
       "_id": "670c538df0b5b1a8f9c11223",
       "name": "Pham Haa",
       "email": "haa12@example.com",
+      "avatar": "default.jpg",
+      "authType": "local",
+      "googleId": null,
       "role": "user",
       "createdAt": "2026-09-18T07:30:00.000Z",
       "updatedAt": "2026-09-18T07:30:00.000Z"
     },
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2NzBjNTM4ZGYwYjViMWE4ZjljMTEyMjMiLCJyb2xlIjoidXNlciIsImlhdCI6MTY3MDAwMDAwMCwiZXhwIjoxNjcwMDg2NDAwfQ...",
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
     "expiresIn": "1d"
   }
   ```
@@ -180,8 +187,85 @@ Xác thực email + password và nhận JWT token để sử dụng cho các req
 
 ---
 
-### 3.4. Lấy thông tin tài khoản hiện tại (Get Me)
-Lấy thông tin profile người dùng đang đăng nhập dựa trên token gửi kèm.
+### 3.4. Đăng nhập bằng Google (Google Login)
+Xác thực Firebase ID Token nhận được từ client Google Sign-In, tự động tạo mới tài khoản nếu chưa có hoặc liên kết nếu đã có, sau đó trả về JWT Token của hệ thống.
+
+- **URL:** `/api/auth/google-login`
+- **Method:** `POST`
+- **Headers:**
+  ```http
+  Content-Type: application/json
+  ```
+- **Request Body:**
+  | Field | Type | Required | Description |
+  | :--- | :--- | :---: | :--- |
+  | `idToken` | `string` | **Có** | Firebase ID Token lấy từ `user.getIdToken()` trên Client |
+
+- **Body mẫu:**
+  ```json
+  {
+    "idToken": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjEyM..."
+  }
+  ```
+
+- **Response Success (`200 OK`):**
+  ```json
+  {
+    "message": "Đăng nhập Google thành công",
+    "user": {
+      "_id": "670c538df0b5b1a8f9c11223",
+      "name": "Pham Haa",
+      "email": "haa12@gmail.com",
+      "avatar": "https://lh3.googleusercontent.com/a/...",
+      "authType": "google",
+      "googleId": "108392019283019283019",
+      "role": "user",
+      "createdAt": "2026-09-18T07:30:00.000Z",
+      "updatedAt": "2026-09-18T07:30:00.000Z"
+    },
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "expiresIn": "1d"
+  }
+  ```
+
+- **Response Errors:**
+  - `400 Bad Request` (Thiếu idToken):
+    ```json
+    {
+      "message": "idToken là bắt buộc",
+      "error": "BadRequest",
+      "statusCode": 400
+    }
+    ```
+  - `400 Bad Request` (Tài khoản Google không có email):
+    ```json
+    {
+      "message": "Tài khoản Google không cung cấp email hợp lệ",
+      "error": "BadRequest",
+      "statusCode": 400
+    }
+    ```
+  - `401 Unauthorized` (Token hết hạn):
+    ```json
+    {
+      "message": "Firebase ID Token đã hết hạn",
+      "error": "Unauthorized",
+      "statusCode": 401
+    }
+    ```
+  - `401 Unauthorized` (Token không hợp lệ):
+    ```json
+    {
+      "message": "Firebase ID Token không hợp lệ",
+      "error": "Unauthorized",
+      "statusCode": 401
+    }
+    ```
+
+---
+
+### 3.5. Lấy thông tin tài khoản hiện tại (Get Me)
+Lấy thông tin profile người dùng đang đăng nhập dựa trên JWT token.
 
 - **URL:** `/api/auth/me`
 - **Method:** `GET`
@@ -199,6 +283,9 @@ Lấy thông tin profile người dùng đang đăng nhập dựa trên token g�
       "_id": "670c538df0b5b1a8f9c11223",
       "name": "Pham Haa",
       "email": "haa12@example.com",
+      "avatar": "default.jpg",
+      "authType": "local",
+      "googleId": null,
       "role": "user",
       "createdAt": "2026-09-18T07:30:00.000Z",
       "updatedAt": "2026-09-18T07:30:00.000Z"
@@ -234,7 +321,7 @@ Lấy thông tin profile người dùng đang đăng nhập dựa trên token g�
 
 ---
 
-### 3.5. Đổi mật khẩu (Change Password)
+### 3.6. Đổi mật khẩu (Change Password)
 Thay đổi mật khẩu tài khoản người dùng đang đăng nhập.
 
 - **URL:** `/api/auth/change-password`
@@ -245,7 +332,7 @@ Thay đổi mật khẩu tài khoản người dùng đang đăng nhập.
   Authorization: Bearer <your_jwt_token>
   ```
 - **Request Body:**
-  | Trường | Kiểu dữ liệu | Bắt buộc | Mô tả |
+  | Field | Type | Required | Description |
   | :--- | :--- | :---: | :--- |
   | `oldPassword` | `string` | **Có** | Mật khẩu hiện tại |
   | `newPassword` | `string` | **Có** | Mật khẩu mới (tối thiểu 6 ký tự) |
@@ -266,7 +353,7 @@ Thay đổi mật khẩu tài khoản người dùng đang đăng nhập.
   ```
 
 - **Response Errors:**
-  - `400 Bad Request` (Thiếu field):
+  - `400 Bad Request` (Thiếu trường):
     ```json
     {
       "message": "oldPassword và newPassword là bắt buộc",
@@ -274,7 +361,7 @@ Thay đổi mật khẩu tài khoản người dùng đang đăng nhập.
       "statusCode": 400
     }
     ```
-  - `400 Bad Request` (Mật khẩu mới ngắn hơn 6 ký tự):
+  - `400 Bad Request` (Mật khẩu mới quá ngắn):
     ```json
     {
       "message": "Password mới phải có ít nhất 6 ký tự",
@@ -293,8 +380,8 @@ Thay đổi mật khẩu tài khoản người dùng đang đăng nhập.
 
 ---
 
-### 3.6. Đăng xuất (Logout)
-Gửi yêu cầu đăng xuất người dùng (Phía FE xóa token khỏi LocalStorage / Cookie / State).
+### 3.7. Đăng xuất (Logout)
+Gửi yêu cầu đăng xuất người dùng (Phía Frontend xóa token khỏi LocalStorage / Cookie / State).
 
 - **URL:** `/api/auth/logout`
 - **Method:** `POST`
@@ -310,8 +397,8 @@ Gửi yêu cầu đăng xuất người dùng (Phía FE xóa token khỏi LocalS
 
 ---
 
-### 3.7. Admin Dashboard (Role-based Authorization)
-Kiểm tra quyền truy cập vào trang Admin dành riêng cho tài khoản có `role: "admin"`.
+### 3.8. Admin Dashboard (RBAC Authorization)
+Kiểm tra quyền truy cập vào endpoint Admin dành riêng cho tài khoản có `role: "admin"`.
 
 - **URL:** `/api/auth/admin/dashboard`
 - **Method:** `GET`
@@ -356,13 +443,26 @@ interface User {
   _id: string;
   name: string;
   email: string;
+  avatar?: string;
+  authType: "local" | "google";
+  googleId?: string | null;
   role: "user" | "admin";
-  createdAt: string; // ISO 8601 Date format
-  updatedAt: string; // ISO 8601 Date format
+  createdAt: string; // ISO 8601 Date
+  updatedAt: string; // ISO 8601 Date
 }
 ```
 
-### Chuẩn Response Lỗi chung
+### Chuẩn Auth Response (Login / Google Login)
+```typescript
+interface AuthResponse {
+  message: string;
+  user: User;
+  token: string;
+  expiresIn: string; // ví dụ: "1d"
+}
+```
+
+### Chuẩn Error Response
 ```typescript
 interface ErrorResponse {
   message: string;
@@ -373,7 +473,9 @@ interface ErrorResponse {
 
 ---
 
-## 5. Hướng dẫn FE tích hợp (Axios Example)
+## 5. Hướng dẫn FE tích hợp
+
+### 5.1. Cấu hình Axios Instance (`apiClient.js`)
 
 ```javascript
 import axios from "axios";
@@ -385,26 +487,59 @@ const apiClient = axios.create({
   }
 });
 
-// Gắn Bearer Token tự động vào Header nếu có
-apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+// Tự động gắn Bearer Token vào Headers nếu có trong LocalStorage
+apiClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
-// Xử lý bắt lỗi hết hạn token (401)
+// Bắt lỗi 401 để tự động xóa token và chuyển hướng login
 apiClient.interceptors.response.use(
   (response) => response.data,
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem("token");
-      // Điều hướng về login nếu cần
+      localStorage.removeItem("user");
     }
-    return Promise.reject(error.response?.data || error.message);
+    return Promise.reject(error.response?.data || { message: error.message });
   }
 );
 
 export default apiClient;
+```
+
+### 5.2. Luồng xử lý Google Sign-In trên Frontend (React + Firebase)
+
+```javascript
+import { signInWithPopup } from "firebase/auth";
+import { auth, googleProvider } from "./firebase";
+import apiClient from "./apiClient";
+
+export const handleGoogleLogin = async () => {
+  try {
+    // 1. Popup Google Sign-In với Firebase Client
+    const result = await signInWithPopup(auth, googleProvider);
+
+    // 2. Lấy Firebase ID Token
+    const idToken = await result.user.getIdToken();
+
+    // 3. Gửi ID Token về Backend để xác thực và lấy Token JWT của hệ thống
+    const data = await apiClient.post("/google-login", { idToken });
+
+    // 4. Lưu JWT Token và User vào localStorage
+    localStorage.setItem("token", data.token);
+    localStorage.setItem("user", JSON.stringify(data.user));
+
+    return data.user;
+  } catch (error) {
+    console.error("Google Login Failed:", error);
+    throw error;
+  }
+};
 ```
