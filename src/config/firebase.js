@@ -24,12 +24,12 @@ try {
         });
 
     firebaseAuth = getAuth(app);
-    console.log("[Firebase Admin] Kh?i t?o th�nh c�ng cho project:", serviceAccount.project_id);
+    console.log("[Firebase Admin] Khởi tạo thành công cho project:", serviceAccount.project_id);
   } else {
-    console.warn("[Firebase Warning] Thi?u bi?n m�i tru?ng FIREBASE_SERVICE_ACCOUNT.");
+    console.warn("[Firebase Warning] Thiếu biến FIREBASE_SERVICE_ACCOUNT.");
   }
 } catch (error) {
-  console.error("[Firebase Warning] Kh�ng th? kh?i t?o Firebase Admin:", error.message);
+  console.error("[Firebase Warning] Khởi tạo không thành công Firebase Admin:", error.message);
 }
 
 export default firebaseAuth;
