@@ -47,6 +47,20 @@ const swaggerOptions = {
               enum: ["user", "admin"],
               example: "user"
             },
+            avatar: {
+              type: "string",
+              example: "https://lh3.googleusercontent.com/a/default.jpg"
+            },
+            authType: {
+              type: "string",
+              enum: ["local", "google"],
+              example: "local"
+            },
+            googleId: {
+              type: "string",
+              nullable: true,
+              example: null
+            },
             createdAt: {
               type: "string",
               format: "date-time",
@@ -100,6 +114,17 @@ const swaggerOptions = {
             }
           }
         },
+        GoogleLoginInput: {
+          type: "object",
+          required: ["idToken"],
+          properties: {
+            idToken: {
+              type: "string",
+              description: "Firebase ID Token nhận được từ Google Sign-In trên client",
+              example: "eyJhbGciOiJSUzI1NiIsImtpZCI6IjEyM..."
+            }
+          }
+        },
         ChangePasswordInput: {
           type: "object",
           required: ["oldPassword", "newPassword"],
@@ -107,6 +132,33 @@ const swaggerOptions = {
             oldPassword: {
               type: "string",
               example: "password123"
+            },
+            newPassword: {
+              type: "string",
+              minLength: 6,
+              example: "newpassword123"
+            }
+          }
+        },
+        ForgotPasswordInput: {
+          type: "object",
+          required: ["email"],
+          properties: {
+            email: {
+              type: "string",
+              format: "email",
+              example: "user@example.com"
+            }
+          }
+        },
+        ResetPasswordInput: {
+          type: "object",
+          required: ["token", "newPassword"],
+          properties: {
+            token: {
+              type: "string",
+              description: "Token đặt lại mật khẩu nhận được qua email",
+              example: "a8b79f6d34e2c817290bc91823..."
             },
             newPassword: {
               type: "string",
@@ -132,6 +184,15 @@ const swaggerOptions = {
             expiresIn: {
               type: "string",
               example: "1d"
+            }
+          }
+        },
+        SimpleMessageResponse: {
+          type: "object",
+          properties: {
+            message: {
+              type: "string",
+              example: "Thao tác thành công"
             }
           }
         },

@@ -52,7 +52,7 @@ const router = express.Router();
  *                 user:
  *                   $ref: '#/components/schemas/User'
  *       400:
- *         description: Thiếu dữ liệu hoặc mật khẩu ngắn hơn 6 ký tự
+ *         description: Thiếu dữ liệu bắt buộc hoặc mật khẩu ngắn hơn 6 ký tự
  *         content:
  *           application/json:
  *             schema:
@@ -78,7 +78,7 @@ router.post("/register", register);
  * @openapi
  * /api/auth/login:
  *   post:
- *     summary: Đăng nhập hệ thống và nhận JWT Token
+ *     summary: Đăng nhập hệ thống bằng email và mật khẩu (Local Auth)
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -91,7 +91,7 @@ router.post("/register", register);
  *             password: "password123"
  *     responses:
  *       200:
- *         description: Đăng nhập thành công, trả về user và JWT token
+ *         description: Đăng nhập thành công, trả về thông tin user và JWT token
  *         content:
  *           application/json:
  *             schema:
@@ -123,30 +123,25 @@ router.post("/login", login);
  * @openapi
  * /api/auth/google-login:
  *   post:
- *     summary: Đăng nhập bằng Google (Firebase ID Token)
+ *     summary: Đăng nhập / Đăng ký bằng Google (Firebase ID Token)
  *     tags: [Auth]
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required:
- *               - idToken
- *             properties:
- *               idToken:
- *                 type: string
- *                 description: Firebase ID Token nhận được từ Google Sign-In trên client
- *                 example: "eyJhbGciOiJSUzI1NiIsImtpZCI6IjEy..."
+ *             $ref: '#/components/schemas/GoogleLoginInput'
+ *           example:
+ *             idToken: "eyJhbGciOiJSUzI1NiIsImtpZCI6IjEyM..."
  *     responses:
  *       200:
- *         description: Đăng nhập Google thành công, trả về user và JWT token
+ *         description: Đăng nhập Google thành công, trả về thông tin user và JWT token
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/AuthResponse'
  *       400:
- *         description: Thiếu idToken hoặc tài khoản Google không cung cấp email
+ *         description: Thiếu idToken hoặc token không chứa email
  *         content:
  *           application/json:
  *             schema:
@@ -162,7 +157,7 @@ router.post("/login", login);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  *             example:
- *               message: "Firebase ID Token không hợp lệ"
+ *               message: "Google ID Token không hợp lệ hoặc đã hết hạn"
  *               error: "Unauthorized"
  *               statusCode: 401
  */
@@ -172,13 +167,13 @@ router.post("/google-login", googleLogin);
  * @openapi
  * /api/auth/me:
  *   get:
- *     summary: Lấy thông tin tài khoản đang đăng nhập
+ *     summary: Lấy thông tin tài khoản hiện tại (Yêu cầu JWT Token)
  *     tags: [Auth]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Lấy thông tin thành công
+ *         description: Lấy thông tin user thành công
  *         content:
  *           application/json:
  *             schema:
@@ -196,11 +191,11 @@ router.post("/google-login", googleLogin);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  *             example:
- *               message: "Token không hợp lệ hoặc đã hết hạn"
- *               error: "jwt malformed"
+ *               message: "Access token is missing or invalid"
+ *               error: "Unauthorized"
  *               statusCode: 401
  *       404:
- *         description: Không tìm thấy user tương ứng với token
+ *         description: Không tìm thấy người dùng tương ứng với token
  *         content:
  *           application/json:
  *             schema:
@@ -216,7 +211,7 @@ router.get("/me", authenticateMiddleware, getMe);
  * @openapi
  * /api/auth/logout:
  *   post:
- *     summary: Đăng xuất người dùng
+ *     summary: Đăng xuất tài khoản
  *     tags: [Auth]
  *     responses:
  *       200:
@@ -224,11 +219,9 @@ router.get("/me", authenticateMiddleware, getMe);
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Đăng xuất thành công"
+ *               $ref: '#/components/schemas/SimpleMessageResponse'
+ *             example:
+ *               message: "Đăng xuất thành công"
  */
 router.post("/logout", logout);
 
@@ -236,7 +229,7 @@ router.post("/logout", logout);
  * @openapi
  * /api/auth/change-password:
  *   put:
- *     summary: Đổi mật khẩu tài khoản
+ *     summary: Đổi mật khẩu tài khoản (Yêu cầu xác thực JWT)
  *     tags: [Auth]
  *     security:
  *       - bearerAuth: []
@@ -255,13 +248,11 @@ router.post("/logout", logout);
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Đổi mật khẩu thành công"
+ *               $ref: '#/components/schemas/SimpleMessageResponse'
+ *             example:
+ *               message: "Đổi mật khẩu thành công"
  *       400:
- *         description: Thiếu dữ liệu hoặc mật khẩu mới quá ngắn
+ *         description: Thiếu dữ liệu hoặc mật khẩu mới quá ngắn (< 6 ký tự)
  *         content:
  *           application/json:
  *             schema:
@@ -271,7 +262,7 @@ router.post("/logout", logout);
  *               error: "BadRequest"
  *               statusCode: 400
  *       401:
- *         description: Mật khẩu hiện tại không đúng hoặc chưa xác thực
+ *         description: Mật khẩu hiện tại không đúng hoặc chưa được xác thực
  *         content:
  *           application/json:
  *             schema:
@@ -280,14 +271,97 @@ router.post("/logout", logout);
  *               message: "Mật khẩu hiện tại không đúng"
  *               error: "Unauthorized"
  *               statusCode: 401
+ *       404:
+ *         description: Không tìm thấy người dùng
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               message: "Không tìm thấy người dùng"
+ *               error: "NotFound"
+ *               statusCode: 404
  */
 router.put("/change-password", authenticateMiddleware, changePassword);
 
 /**
  * @openapi
+ * /api/auth/forgot-password:
+ *   post:
+ *     summary: Yêu cầu gửi email đặt lại mật khẩu
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/ForgotPasswordInput'
+ *           example:
+ *             email: "user@example.com"
+ *     responses:
+ *       200:
+ *         description: Yêu cầu đã được xử lý (trả về thông báo thành công dù email có tồn tại hay không để bảo mật)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SimpleMessageResponse'
+ *             example:
+ *               message: "Nếu email tồn tại, hướng dẫn đặt lại mật khẩu đã được gửi"
+ *       400:
+ *         description: Thiếu email trong body request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               message: "Email là bắt buộc"
+ *               error: "BadRequest"
+ *               statusCode: 400
+ */
+router.post("/forgot-password", forgotPassword);
+
+/**
+ * @openapi
+ * /api/auth/reset-password:
+ *   post:
+ *     summary: Đặt lại mật khẩu mới bằng token đã nhận qua email
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/ResetPasswordInput'
+ *           example:
+ *             token: "a8b79f6d34e2c817290bc91823f..."
+ *             newPassword: "newpassword123"
+ *     responses:
+ *       200:
+ *         description: Đặt lại mật khẩu thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SimpleMessageResponse'
+ *             example:
+ *               message: "Đặt lại mật khẩu thành công"
+ *       400:
+ *         description: Thiếu token/mật khẩu mới, mật khẩu mới < 6 ký tự hoặc token không hợp lệ / hết hạn
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *             example:
+ *               message: "Token đặt lại mật khẩu không hợp lệ hoặc đã hết hạn"
+ *               error: "BadRequest"
+ *               statusCode: 400
+ */
+router.post("/reset-password", resetPassword);
+
+/**
+ * @openapi
  * /api/auth/admin/dashboard:
  *   get:
- *     summary: Truy cập khu vực Admin (Yêu cầu quyền admin - RBAC)
+ *     summary: Truy cập khu vực quản trị viên (Yêu cầu quyền admin - RBAC)
  *     tags: [Auth]
  *     security:
  *       - bearerAuth: []
@@ -297,13 +371,11 @@ router.put("/change-password", authenticateMiddleware, changePassword);
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Bạn đã truy cập khu vực admin"
+ *               $ref: '#/components/schemas/SimpleMessageResponse'
+ *             example:
+ *               message: "Bạn đã truy cập khu vực admin"
  *       401:
- *         description: Chưa đăng nhập hoặc token không hợp lệ
+ *         description: Chưa đăng nhập hoặc JWT token không hợp lệ
  *         content:
  *           application/json:
  *             schema:
@@ -323,8 +395,6 @@ router.put("/change-password", authenticateMiddleware, changePassword);
  *               error: "Forbidden"
  *               statusCode: 403
  */
-router.post("/forgot-password", forgotPassword);
-router.post("/reset-password", resetPassword);
 router.get(
   "/admin/dashboard",
   authenticateMiddleware,

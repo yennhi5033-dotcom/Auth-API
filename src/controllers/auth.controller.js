@@ -126,14 +126,14 @@
 
           if (!user) {
             return res.status(404).json({
-              message: "Kh�ng t�m th?y ngu?i d�ng",
+              message: "Không tìm thấy người dùng",
               error: "NotFound",
               statusCode: 404
             });
           }
 
           return res.status(200).json({
-            message: "L?y th�ng tin th�nh c�ng",
+            message: "Lấy thông tin thành công",
             user: removePassword(user)
           });
         } catch (error) {
@@ -147,7 +147,7 @@
 
           if (!oldPassword || !newPassword) {
             return res.status(400).json({
-              message: "oldPassword v� newPassword l� b?t bu?c",
+              message: "oldPassword và newPassword là bắt buộc",
               error: "BadRequest",
               statusCode: 400
             });
@@ -155,7 +155,7 @@
 
           if (newPassword.length < 6) {
             return res.status(400).json({
-              message: "Password m?i ph?i c� �t nh?t 6 k� t?",
+              message: "Password phải có ít nhất 6 ký tự",
               error: "BadRequest",
               statusCode: 400
             });
@@ -166,7 +166,7 @@
 
           if (!user) {
             return res.status(404).json({
-              message: "Kh�ng t�m th?y ngu?i d�ng",
+              message: "Không tìm thấy người dùng",
               error: "NotFound",
               statusCode: 404
             });
@@ -176,7 +176,7 @@
 
           if (!isOldPasswordValid) {
             return res.status(401).json({
-              message: "M?t kh?u hi?n t?i kh�ng d�ng",
+              message: "Mật khẩu cũ không đúng",
               error: "Unauthorized",
               statusCode: 401
             });
@@ -187,7 +187,7 @@
           await user.save();
 
           return res.status(200).json({
-            message: "�?i m?t kh?u th�nh c�ng"
+            message: "Thay đổi mật khẩu thành công"
           });
         } catch (error) {
           next(error);
@@ -231,13 +231,13 @@
           } catch (err) {
             if (err.code === "auth/id-token-expired") {
               return res.status(401).json({
-                message: "Firebase ID Token d� h?t h?n",
+                message: "Firebase ID Token hết hạn",
                 error: "Unauthorized",
                 statusCode: 401,
               });
             }
             return res.status(401).json({
-              message: "Firebase ID Token kh�ng h?p l?",
+              message: "Firebase ID Token không hợp lệ",
               error: "Unauthorized",
               statusCode: 401,
             });
@@ -247,7 +247,7 @@
 
           if (!email) {
             return res.status(400).json({
-              message: "T�i kho?n Google kh�ng cung c?p email h?p l?",
+              message: "Tài khoản của Google không có email",
               error: "BadRequest",
               statusCode: 400,
             });
@@ -273,7 +273,7 @@
               await user.save();
             }
           } else {
-            // 3. N?u chua c� t�i kho?n: t?o User m?i v?i authType = 'google'
+            // 3. Không có tài khoản: tạo User mới với authType = 'google'
             user = await User.create({
               name: name || normalizedEmail.split("@")[0],
               email: normalizedEmail,
@@ -284,7 +284,7 @@
             });
           }
 
-          // 4. K� JWT c?a h? th?ng (d�ng chung quy u?c v?i login thu?ng)
+          // 4. Create JWT token (dùng login thường xuyên)
           const expiresIn = process.env.JWT_EXPIRES_IN || "1d";
           const token = jwt.sign(
             {
@@ -296,7 +296,7 @@
           );
 
           return res.status(200).json({
-            message: "�ang nh?p Google th�nh c�ng",
+            message: "Đăng nhập Google thành công",
             user: removePassword(user),
             token,
             expiresIn,
@@ -395,7 +395,7 @@
             });
           }
 
-          user.password = await bcrypt.hash(newPassword, 10);
+          user.password = newPassword;
           user.passwordResetToken = null;
           user.passwordResetExpires = null;
           await user.save();
