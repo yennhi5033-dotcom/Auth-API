@@ -5,7 +5,9 @@ import {
   googleLogin,
   getMe,
   changePassword,
-  logout
+  logout,
+  forgotPassword,
+  resetPassword
 } from "../controllers/auth.controller.js";
 import { authenticateMiddleware } from "../middleware/auth.middleware.js";
 import { authorizeRoles } from "../middleware/role.middleware.js";
@@ -321,6 +323,8 @@ router.put("/change-password", authenticateMiddleware, changePassword);
  *               error: "Forbidden"
  *               statusCode: 403
  */
+router.post("/forgot-password", forgotPassword);
+router.post("/reset-password", resetPassword);
 router.get(
   "/admin/dashboard",
   authenticateMiddleware,

@@ -4,8 +4,8 @@ Content-Type: application/json
 
 {
   "name": "user",
-  "email": "user@example.com",
-  "password": "1234567"
+  "email": "nguyentyennhi90@dtu.edu.vn",
+  "password": "987654"
 }
 ### Login User
 POST http://localhost:3001/api/auth/login
@@ -13,7 +13,7 @@ Content-Type: application/json
 
 {
   "email": "user@example.com",
-  "password": "1234657"
+  "password": "2222222"
 }
 ### Get Current User
 GET http://localhost:3001/api/auth/me
@@ -25,8 +25,8 @@ Authorization: Bearer <token>
 Content-Type: application/json
 
 {
-  "oldPassword": "1234657",
-  "newPassword": "2222222"
+  "oldPassword": "2222222",
+  "newPassword": "123456"
 }
 
 ### Logout User
@@ -65,4 +65,21 @@ Content-Type: application/json
 
 {
   "idToken": "fake_token_123456"
+}
+
+### Quên mật khẩu: luôn mong đợi 200 với email hợp lệ/không tồn tại
+POST http://localhost:3001/api/auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "nguyentyennhi90@dtu.edu.vn"
+}
+
+### Đặt lại mật khẩu: lấy raw token từ email, không phải hash trong MongoDB
+POST http://localhost:3001/api/auth/reset-password
+Content-Type: application/json
+
+{
+    "token": "PASTE_RAW_TOKEN_FROM_EMAIL",
+  "newPassword": "new-password-123"
 }
